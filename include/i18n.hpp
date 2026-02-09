@@ -1,21 +1,15 @@
-#ifndef I18N
-#define I18N
+#pragma once
 
 #include <filesystem>
+#include <functional>
 #include <string>
-#include <unordered_map>
 
-class i18n {
-	static std::unordered_map<std::string, std::unordered_map<std::string, std::string>> _translations;
-	static std::string _language;
-	public:
-		static void load(const std::filesystem::path &path);
+namespace i18n {
+	void set_language(const std::string &code);
 
-		static bool has_lang(const std::string &locale);
+	std::string current_language();
 
-		static void set_lang(const std::string &locale);
+	std::string get(const std::string &key);
 
-		static std::string get(const std::string &key);
-};
-
-#endif
+	void load(const std::filesystem::path &path, const std::string &extension, const std::function<std::unordered_map<std::string, std::string>(const std::string &content)> &parser);
+}

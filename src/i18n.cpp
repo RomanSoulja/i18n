@@ -1,17 +1,34 @@
-#include <i18n.hpp>
+#include "i18n.hpp"
 
 #include <fstream>
-#include "thirdparty/nlohmann/json.hpp"
 
-std::unordered_map<std::string, std::unordered_map<std::string, std::string>> i18n::_translations;
-std::string i18n::_language = "en_us";
+static std::unordered_map<std::string, std::unordered_map<std::string, std::string>> translations;
+static std::string default_language = "en_us";
+static std::string language = default_language;
 
-void i18n::load(const std::filesystem::path &path) {
-	_translations.clear();
-	for (const std::filesystem::directory_entry &entry : std::filesystem::directory_iterator{path}) {
-		std::string language = entry.path().stem().string();
-		_translations[language] = std::unordered_map<std::string, std::string>{};
-		if (!entry.is_regular_file() || entry.path().extension() != ".json") {
+void i18n::set_language(const std::string &code) {
+	language = code;
+}
+
+std::string i18n::current_language() {
+	return language;
+}
+
+std::string i18n::get(const std::string &key) {
+	const std::string lang = translations.contains(language) ? language : default_language;
+	return translations[lang].contains(key) ? translations[lang][key] : "i18n{lang=" + lang + ", key=" + key + "}";
+}
+
+std::string read(const std::ifstream& file) {
+	std::ostringstream stream;
+	stream << file.rdbuf();
+	return stream.str();
+}
+
+void i18n::load(const std::filesystem::path &path, const std::string &extension, const std::function<std::unordered_map<std::string, std::string>(const std::string &content)> &parser) {
+	translations.clear();
+	for (const std::filesystem::directory_entry &entry: std::filesystem::directory_iterator{path}) {
+		if (!entry.is_regular_file() || entry.path().extension() != extension) {
 			continue;
 		}
 
@@ -20,25 +37,7 @@ void i18n::load(const std::filesystem::path &path) {
 			continue;
 		}
 
-		std::string content;
-		content.assign(std::istreambuf_iterator(file), std::istreambuf_iterator<char>());
-
-		nlohmann::json json = nlohmann::json::parse(content);
-		for (auto &[key, value] : json.items()) {
-			_translations[language][key] = value.get<std::string>();
-		}
+		translations[entry.path().stem().string()] = parser(read(file));
+		file.close();
 	}
-}
-
-bool i18n::has_lang(const std::string &locale) {
-	return _translations.contains(locale);
-}
-
-void i18n::set_lang(const std::string &locale) {
-	_language = locale;
-}
-
-std::string i18n::get(const std::string &key) {
-	const std::string language = _translations.contains(_language) ? _language : "en_us";
-	return _translations[language].contains(key) ? _translations[language][key] : "i18n{" + key + " is undefined}";
 }
