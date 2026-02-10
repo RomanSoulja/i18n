@@ -2,7 +2,7 @@
 
 > Created *exclusively* for learning C++.
 
-A lightweight library that lets you store translation files in JSON format
+A lightweight library that lets you store translation files
 and retrieve localized strings at runtime.
 
 ---  
